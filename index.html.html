@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Atelier — Random Acts of Light</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300..500;1,9..144,300..500&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* =====================================================================
+   ATELIER — an editorial, living photo mosaic
+   Warm paper · ink black · one vermilion accent
+   ===================================================================== */
+:root{
+  --paper:#f1ece2; --paper2:#e6dfd0; --ink:#161513; --ink2:#2a2825;
+  --mute:#6f695e; --red:#e4472b; --ochre:#f0b13a; --line:rgba(22,21,19,.14);
+  --serif:"Fraunces","Iowan Old Style","Palatino Linotype",Palatino,"Book Antiqua",Georgia,serif;
+  --sans:"Inter",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --ease:cubic-bezier(.16,1,.3,1);
+}
+*{box-sizing:border-box}
+html{background:var(--paper)}
+body{
+  margin:0; min-height:100vh; color:var(--ink); background:var(--paper);
+  font-family:var(--sans); overflow-x:hidden;
+  padding-bottom:calc(120px + env(safe-area-inset-bottom,0px));
+  -webkit-font-smoothing:antialiased;
+}
+/* paper grain */
+body::before{
+  content:""; position:fixed; inset:0; pointer-events:none; z-index:200; opacity:.22; mix-blend-mode:multiply;
+  background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='180' height='180'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/><feColorMatrix values='0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .55 0'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
+}
+.wrap{max-width:1320px; margin:0 auto; padding:0 clamp(16px,4vw,48px)}
+
+/* ---------- masthead ---------- */
+.meta{
+  display:flex; justify-content:space-between; gap:1rem; flex-wrap:wrap;
+  font:500 .68rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--mute);
+  padding:calc(env(safe-area-inset-top,0px) + 20px) 0 14px; border-bottom:1px solid var(--line);
+}
+.meta b{color:var(--ink); font-weight:500}
+.hero{
+  display:grid; grid-template-columns:1.35fr 1fr; gap:clamp(20px,4vw,64px); align-items:end;
+  padding:clamp(28px,5vw,64px) 0 clamp(22px,3vw,34px);
+}
+h1{
+  font-family:var(--serif); font-weight:350; margin:0;
+  font-size:clamp(3.2rem,10.5vw,9.4rem); line-height:.86; letter-spacing:-.04em;
+  font-variation-settings:"opsz" 144;
+}
+h1 .ln{display:block; overflow:hidden; padding-bottom:.06em}
+h1 .ln > span{display:inline-block}
+h1 em{font-style:italic; font-weight:300}
+h1 .dot{color:var(--red)}
+.intro p{margin:0; font-size:clamp(.95rem,1.2vw,1.05rem); line-height:1.6; color:#3d3a34; max-width:38ch}
+.intro p::first-letter{font-family:var(--serif); font-size:2.9em; float:left; line-height:.8; padding:.08em .1em 0 0; color:var(--red)}
+.stats{display:flex; gap:clamp(18px,3vw,36px); margin:26px 0 0; padding:0}
+.stats div{border-left:1px solid var(--line); padding-left:12px}
+.stats dt{font:500 .62rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:var(--mute)}
+.stats dd{margin:.35rem 0 0; font:400 clamp(1.7rem,3vw,2.4rem)/1 var(--serif); font-variant-numeric:tabular-nums}
+
+.live{
+  display:flex; align-items:center; gap:12px; margin-bottom:clamp(16px,2vw,24px);
+  border-top:1px solid var(--ink); border-bottom:1px solid var(--line); padding:11px 0;
+  font:500 .7rem/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; overflow:hidden; white-space:nowrap;
+}
+.pulse{width:8px; height:8px; border-radius:50%; background:var(--red); position:relative; flex:none}
+.pulse::after{content:""; position:absolute; inset:0; border-radius:50%; background:var(--red); animation:ping 1.6s var(--ease) infinite}
+body.paused .pulse::after{animation:none}
+body.paused .pulse{background:var(--mute)}
+@keyframes ping{from{transform:scale(1); opacity:.7} to{transform:scale(3.2); opacity:0}}
+.live .lbl{color:var(--red)}
+.live .txtwrap{overflow:hidden; flex:1; min-width:0}
+#liveText{display:inline-block}
+.live .hint{color:var(--mute)}
+
+/* ---------- mosaic ---------- */
+.mosaic{
+  display:grid;
+  gap:var(--gap, clamp(8px,1.15vw,16px));
+  grid-template-columns:repeat(auto-fill, minmax(200px, 1fr));
+  grid-auto-rows: 8px;
+  grid-auto-flow: dense;
+  align-items: start;
+}
+.tile{
+  margin:0; position:relative; min-width:0;
+  grid-row-end: span var(--row-span, 30);
+  border-radius:6px;
+  overflow:hidden;
+}
+.tilt{width:100%; height:100%; position:relative; transition:transform .6s var(--ease);}
+.box{
+  all:unset; position:relative; display:block; width:100%; height:100%; overflow:hidden; cursor:pointer;
+  background:var(--paper2); border-radius:6px;
+  box-shadow:0 1px 0 rgba(22,21,19,.05), 0 22px 44px -26px rgba(22,21,19,.55);
+  -webkit-tap-highlight-color:transparent;
+  display:flex; align-items:center; justify-content:center;
+}
+.box:focus-visible{outline:2px solid var(--red); outline-offset:3px}
+.base,.fimg{position:relative; width:100%; height:auto; max-height:100%; object-fit:contain; display:block;}
+.box .base { position: relative; }
+.box[data-fit="contain"] .base,.fimg.contain{object-fit:contain}
+.fxl{position:absolute; inset:0; pointer-events:none; z-index:2}
+.pc{position:absolute; overflow:hidden; will-change:transform,opacity}
+.pc img{position:absolute; max-width:none; object-fit:contain; display:block}
+.pc img.contain{object-fit:contain}
+.bar{position:absolute; inset:0}
+
+.tag{
+  position:absolute; top:10px; left:10px; z-index:4; pointer-events:none;
+  font:500 .6rem/1 var(--mono); letter-spacing:.12em; padding:5px 7px 4px; border-radius:3px;
+  background:var(--paper); color:var(--ink);
+}
+.tile figcaption{
+  position:absolute; left:0; right:0; bottom:0; z-index:4; pointer-events:none;
+  padding:28px 14px 12px; border-radius:0 0 6px 6px; color:var(--paper);
+  background:linear-gradient(transparent, rgba(22,21,19,.62));
+  font:italic 400 clamp(.9rem,1.2vw,1.1rem)/1.2 var(--serif);
+  opacity:0; transform:translateY(8px); transition:opacity .35s, transform .45s var(--ease);
+}
+.tile:hover figcaption,.tile:focus-within figcaption{opacity:1; transform:none}
+@media (hover:none){ .tile figcaption{opacity:1; transform:none} }
+
+@media (max-width:760px){
+  .hero{grid-template-columns:1fr}
+  .mosaic{
+    grid-template-columns:repeat(auto-fill, minmax(140px, 1fr));
+    grid-auto-rows: 6px;
+  }
+  .live .hint{display:none}
+}
+
+.foot{
+  margin-top:28px; padding-top:14px; border-top:1px solid var(--line);
+  display:flex; justify-content:space-between; flex-wrap:wrap; gap:.6rem;
+  font:500 .64rem/1.4 var(--mono); letter-spacing:.12em; text-transform:uppercase; color:var(--mute);
+}
+
+/* ---------- dock ---------- */
+.dock{
+  position:fixed; left:50%; bottom:calc(env(safe-area-inset-bottom,0px) + 18px); transform:translateX(-50%);
+  z-index:60; display:flex; align-items:center; gap:2px; padding:6px;
+  background:var(--ink); color:var(--paper); border-radius:999px;
+  box-shadow:0 18px 40px -14px rgba(22,21,19,.6);
+  max-width:calc(100vw - 20px);
+}
+.dk{
+  all:unset; cursor:pointer; white-space:nowrap;
+  font:500 .68rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase;
+  padding:.8rem 1rem; border-radius:999px; transition:background .2s, color .2s;
+}
+.dk:hover{background:rgba(241,236,226,.12)}
+.dk:focus-visible{outline:2px solid var(--red)}
+.dk.red{background:var(--red)}
+.chaos{display:flex; align-items:center; gap:10px; padding:0 .9rem 0 .7rem}
+.chaos span{font:500 .68rem/1 var(--mono); letter-spacing:.1em; text-transform:uppercase; opacity:.7}
+.bars{display:flex; align-items:flex-end; gap:3px; height:18px}
+.bars button{all:unset; cursor:pointer; width:6px; border-radius:2px; background:rgba(241,236,226,.25); transition:background .2s}
+.bars button.on{background:var(--red)}
+.bars button:focus-visible{outline:1px solid var(--paper)}
+@media (max-width:560px){ .dk{padding:.75rem .7rem} .chaos span{display:none} .dk .t{display:none} }
+
+/* ---------- viewer ---------- */
+.viewer{
+  position:fixed; inset:0; z-index:100; background:#12110f; color:var(--paper);
+  display:grid; grid-template-rows:auto minmax(0,1fr) auto;
+  opacity:0; visibility:hidden; transition:opacity .35s, visibility 0s .35s;
+  padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px);
+}
+.viewer.open{opacity:1; visibility:visible; transition:opacity .35s}
+.vtop{
+  display:flex; justify-content:space-between; align-items:center; gap:1rem;
+  padding:18px clamp(16px,4vw,40px);
+  font:500 .7rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; color:#a9a293;
+}
+.vtop .vfx{color:var(--red); display:inline-block}
+.vbtn{all:unset; cursor:pointer; color:var(--paper); font:500 .7rem/1 var(--mono); letter-spacing:.14em; text-transform:uppercase; transition:color .2s}
+.vbtn:hover{color:var(--red)}
+.stagewrap{display:grid; place-items:stretch; min-height:0; padding:0 clamp(10px,5vw,80px)}
+.stage{
+  position:relative; width:100%; height:100%; max-width:1200px; margin:0 auto; overflow:hidden;
+  transform-origin:0 0; touch-action:pan-y;
+}
+.vbottom{
+  display:grid; grid-template-columns:1fr auto; align-items:end; gap:14px 24px;
+  padding:16px clamp(16px,4vw,40px) 22px;
+}
+#vCap{margin:0; font:italic 300 clamp(1.5rem,4vw,3rem)/1.05 var(--serif); letter-spacing:-.02em}
+#vCap .w{display:inline-block; overflow:hidden; vertical-align:bottom; padding-bottom:.08em}
+#vCap .w > span{display:inline-block}
+.vnav{display:flex; gap:8px; flex-wrap:wrap}
+.pill{
+  all:unset; cursor:pointer; padding:.75rem 1.05rem; border-radius:999px; border:1px solid rgba(241,236,226,.25);
+  font:500 .68rem/1 var(--mono); letter-spacing:.12em; text-transform:uppercase; transition:background .2s, color .2s, border-color .2s;
+}
+.pill:hover{background:var(--paper); color:var(--ink)}
+.pill.on{background:var(--red); border-color:var(--red); color:var(--paper)}
+.pill:focus-visible{outline:2px solid var(--red)}
+.prog{grid-column:1/-1; height:2px; background:rgba(241,236,226,.12); overflow:hidden}
+.prog i{display:block; height:100%; width:0; background:var(--red)}
+@media (max-width:640px){ .vbottom{grid-template-columns:1fr} }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="meta">
+    <span><b>Atelier</b> ◦ ||Zeel ladani||</span>
+    <span>A random image gallery</span>
+    <span id="today">—</span>
+  </div>
+
+  <section class="hero">
+    <h1 id="heroTitle">
+      <span class="ln"><span>Random</span></span>
+      <span class="ln"><span><em>acts of</em></span></span>
+      <span class="ln"><span>light<span class="dot">.</span></span></span>
+    </h1>
+    <div class="intro">
+      <p id="heroTagline">This mosaic keeps changing. Every few seconds, frames swap places using one of fourteen transitions picked at random, with random timing, direction and origin. The same moment rarely happens twice.</p>
+      <dl class="stats">
+        <div><dt>Frames</dt><dd id="stFrames">00</dd></div>
+        <div><dt>Transitions</dt><dd id="stFx">00</dd></div>
+        <div><dt>Played</dt><dd id="stPlayed">000</dd></div>
+      </dl>
+    </div>
+  </section>
+
+  <div class="live" aria-live="polite">
+    <span class="pulse"></span><span class="lbl">Live</span>
+    <span class="txtwrap"><span id="liveText">Setting the table…</span></span>
+    <span class="hint">Tap a frame to open</span>
+  </div>
+
+  <main class="mosaic" id="mosaic"></main>
+
+  <div class="foot">
+    <span>← → browse · Space slideshow · Esc close</span>
+    <span id="footInfo">Atelier gallery — made with random intent</span>
+  </div>
+</div>
+
+<nav class="dock" aria-label="Gallery controls">
+  <button class="dk" id="btnPause" title="Pause / play the mosaic">❚❚ <span class="t">Pause</span></button>
+  <button class="dk" id="btnLayout" title="Shuffle the layout">⤮ <span class="t">Re-layout</span></button>
+  <button class="dk red" id="btnSurprise" title="Open a random photo">✦ <span class="t">Surprise</span></button>
+  <div class="chaos" title="How often frames change"><span>Chaos</span><div class="bars" id="bars"></div></div>
+</nav>
+
+<div class="viewer" id="viewer" role="dialog" aria-modal="true" aria-label="Photo viewer">
+  <div class="vtop">
+    <span id="vIdx">No. 01 / 08</span>
+    <span class="vfx" id="vFx">✦</span>
+    <button class="vbtn" id="vClose">Close ✕</button>
+  </div>
+  <div class="stagewrap"><div class="stage" id="stage" data-fit="contain"><img class="base" alt=""></div></div>
+  <div class="vbottom">
+    <h2 id="vCap"></h2>
+    <div class="vnav">
+      <button class="pill" id="vPrev">← Prev</button>
+      <button class="pill" id="vPlay">▶ Slideshow</button>
+      <button class="pill" id="vNext">Next →</button>
+    </div>
+    <div class="prog"><i id="vProg"></i></div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   GALLERY CONFIG — EDIT THIS
+   ---------------------------------------------------------------------
+   📸  TO ADD YOUR IMAGES:
+       1. Put your image files directly in the same folder as this
+          HTML file (the root folder).
+       2. Add a new line inside the PHOTOS array below for each image.
+          Use the exact filename (including extension) as the `src`.
+       3. The caption is optional — it appears on hover and in the viewer.
+       4. Save & reload. Done.
+
+   Example:
+     { src: "my-photo.jpg", caption: "A moment in time" },
+     { src: "sunset.png",   caption: "Evening glow" },
+
+   • 1–8 photos  → all show at once.
+   • 9+ photos   → 8 visible; extras rotate in randomly.
+   • If a file is missing, a generative placeholder fills the slot.
+   • You can also use full URLs (https://...) or data URIs.
+   ===================================================================== */
+const TITLE   = ["Random", "acts of", "light."];
+const TAGLINE = "This mosaic keeps changing. Every few seconds, frames swap places using one of fourteen transitions picked at random, with random timing, direction and origin. The same moment rarely happens twice.";
+
+const PHOTOS = [
+  // ——— YOUR IMAGES GO HERE (root folder) ———
+  { src: "01.png", caption: "Morning over the ridge"     },
+  { src: "02.png", caption: "Circles of late August"     },
+  { src: "03.png", caption: "Noon, in blue stripes"      },
+  { src: "04.jpeg", caption: "Kites over the old city"    },
+  { src: "05.jpg", caption: "Tide lines"                 },
+  { src: "06.jpg", caption: "Studio Bauhaus"             },
+  { src: "07.jpg", caption: "The quiet peak"             },
+  { src: "08.jpg", caption: "Moonrise, Arabian Sea"      },
+  { src: "09.jpg", caption: "Moonrise, Arabian Sea"      },
+  { src: "10.jpg", caption: "Moonrise, Arabian Sea"      },
+  { src: "11.jpg", caption: "Moonrise, Arabian Sea"      },
+  { src: "12.jpg", caption: "Osam Hill, Patanvav"      },
+  { src: "13.png", caption: "Patanvav"},
+  { src: "14.png", caption: "Moonrise, Arabian Sea"      },
+  { src: "15.png", caption: "Moonrise, Arabian Sea"      },
+  { src: "16.png", caption: "Moonrise, Arabian Sea"      }
+  // add more lines like this:
+  // { src: "09.jpg", caption: "Another moment" },
+];
+
+/* ---------- procedural fallback art — used if a photo is missing ---------- */
+const FALLBACK = (function(){
+  const C = {paper:"#f1ece2", ink:"#161513", red:"#e4472b", ochre:"#f0b13a", teal:"#2f5d62", sky:"#a9c2d9", blush:"#e3b2a6", cobalt:"#34408f"};
+  const arts = [
+    ()=>`<rect width="600" height="600" fill="${C.sky}"/><circle cx="410" cy="220" r="96" fill="${C.red}"/><path d="M0 420 Q150 300 300 400 T600 360 V600 H0Z" fill="${C.teal}"/><path d="M0 480 Q200 400 360 480 T600 470 V600 H0Z" fill="${C.ink}"/>`,
+    ()=>`<rect width="600" height="600" fill="${C.ochre}"/>`+[520,440,360,280,200,120].map((r,k)=>`<circle cx="0" cy="600" r="${r}" fill="${k%2?C.paper:C.ink}"/>`).join("")+`<circle cx="470" cy="140" r="60" fill="${C.red}"/>`,
+    ()=>`<rect width="600" height="600" fill="${C.paper}"/>`+Array.from({length:14},(_,k)=>`<rect y="${k*44+10}" width="600" height="14" fill="${C.cobalt}"/>`).join("")+`<circle cx="300" cy="300" r="170" fill="${C.red}" style="mix-blend-mode:multiply"/>`,
+    ()=>`<rect width="600" height="600" fill="${C.ink}"/>`+[[140,160,70,C.red],[330,110,48,C.ochre],[470,230,60,C.blush],[240,320,54,C.sky],[420,400,40,C.red],[120,430,36,C.ochre]].map(([x,y,r,c])=>`<g transform="rotate(45 ${x} ${y})"><rect x="${x-r}" y="${y-r}" width="${2*r}" height="${2*r}" fill="${c}"/></g><path d="M${x} ${y+r*1.4} q ${-20} 60 ${10} 120 t 0 120" stroke="${C.paper}" stroke-opacity=".5" stroke-width="2" fill="none"/>`).join(""),
+    ()=>{let p="";for(let k=0;k<12;k++){const y=80+k*42;let d=`M0 ${y}`;for(let x=0;x<=600;x+=30)d+=` L${x} ${(y+Math.sin(x/60+k*.7)*16).toFixed(1)}`;p+=`<path d="${d}" stroke="${k%4===0?C.ochre:C.paper}" stroke-width="${k%4===0?5:2.5}" fill="none"/>`;}return `<rect width="600" height="600" fill="${C.teal}"/>${p}`;},
+    ()=>`<rect width="600" height="600" fill="${C.paper}"/><path d="M0 0 H300 A300 300 0 0 1 0 300Z" fill="${C.red}"/><rect x="300" y="0" width="300" height="300" fill="${C.ink}"/><circle cx="450" cy="150" r="110" fill="${C.ochre}"/><path d="M300 600 V300 A300 300 0 0 1 600 600Z" fill="${C.cobalt}"/><rect x="0" y="300" width="300" height="300" fill="${C.blush}"/><path d="M0 600 L150 300 L300 600Z" fill="${C.ink}"/>`,
+    ()=>`<rect width="600" height="600" fill="${C.blush}"/><circle cx="160" cy="150" r="54" fill="${C.paper}"/><path d="M40 520 L300 150 L560 520Z" fill="${C.ink}"/><path d="M300 150 L370 250 L330 240 L300 270 L260 245 L230 250Z" fill="${C.paper}"/><rect y="520" width="600" height="80" fill="${C.red}"/>`,
+    ()=>`<rect width="600" height="600" fill="${C.cobalt}"/><rect y="360" width="600" height="240" fill="${C.ink}"/><circle cx="300" cy="230" r="80" fill="${C.ochre}"/>`+Array.from({length:7},(_,k)=>`<rect x="${300-(70-k*9)}" y="${385+k*28}" width="${2*(70-k*9)}" height="6" rx="3" fill="${C.ochre}" opacity="${.9-k*.1}"/>`).join(""),
+  ];
+  const build = i => {
+    const s = arts[i % arts.length]();
+    return "data:image/svg+xml;utf8," + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 600 600" width="600" height="600" preserveAspectRatio="xMidYMid meet">${s}</svg>`);
+  };
+  const cache = {};
+  return i => cache[i] || (cache[i] = build(i));
+})();
+
+/* resolve the final src for a given photo index — falls back to procedural art on error */
+function resolveSrc(i, tryCount){
+  const entry = PHOTOS[i];
+  if(!entry) return FALLBACK(i);
+  const url = entry.src;
+  if(tryCount && tryCount > 0) return FALLBACK(i);
+  return url;
+}
+/* attach an error handler to an <img> so a broken src silently swaps to fallback art */
+function withFallback(img, photoIndex){
+  img.onerror = () => {
+    img.onerror = null;
+    if(img.src !== FALLBACK(photoIndex)){ img.src = FALLBACK(photoIndex); }
+  };
+  return img;
+}
+
+/* ---------- helpers ---------- */
+const $ = id => document.getElementById(id);
+const rand = (a,b) => a + Math.random()*(b-a);
+const ri   = (a,b) => Math.floor(rand(a, b+1));
+const pick = a => a[Math.floor(Math.random()*a.length)];
+const sign = () => Math.random() < .5 ? -1 : 1;
+const pad  = (n,l=2) => String(n).padStart(l,"0");
+const E = { out:"cubic-bezier(.16,1,.3,1)", back:"cubic-bezier(.34,1.56,.64,1)", io:"cubic-bezier(.65,0,.35,1)", in:"cubic-bezier(.55,0,.8,.2)" };
+const REDUCED = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const fin = a => a.finished.catch(()=>{});
+const all = arr => Promise.all(arr.map(fin));
+const shuffle = a => { a = a.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+
+const cache = new Map();
+function preload(src){
+  if(!cache.has(src)) cache.set(src, new Promise(res => {
+    const im = new Image();
+    const done = ok => res(ok ? src : null);
+    im.onload  = () => done(true);
+    im.onerror = () => done(false);
+    im.src = src;
+    im.decode?.().then(()=>done(true), ()=>done(false));
+  }));
+  return cache.get(src);
+}
+/* Resolve a photo src: try the user's file, fall back to procedural art if it fails. */
+async function resolve(i){
+  const entry = PHOTOS[i]; if(!entry) return FALLBACK(i);
+  const ok = await preload(entry.src);
+  return ok ? entry.src : FALLBACK(i);
+}
+
+/* =====================================================================
+   TRANSITION ENGINE — used by both the mosaic tiles and the viewer.
+   Every effect is built with the Web Animations API, and its parameters
+   (slice count, direction, origin, timing, colour) are re-rolled each run.
+   ===================================================================== */
+function full(ctx){ const im = new Image(); im.alt = ""; im.src = ctx.src; im.className = "fimg" + (ctx.fit==="contain"?" contain":""); ctx.layer.append(im); return im; }
+function pieces(ctx, cols, rows){
+  const out = [], eps = .3;
+  for(let r=0;r<rows;r++) for(let c=0;c<cols;c++){
+    const x = c*100/cols, y = r*100/rows, w = 100/cols + eps, h = 100/rows + eps;
+    const d = document.createElement("div"); d.className = "pc";
+    d.style.cssText = `left:${x}%;top:${y}%;width:${w}%;height:${h}%`;
+    const im = new Image(); im.alt = ""; im.src = ctx.src; if(ctx.fit==="contain") im.className = "contain";
+    im.style.cssText = `left:${-x/w*100}%;top:${-y/h*100}%;width:${1e4/w}%;height:${1e4/h}%; object-fit:contain;`;
+    d.append(im); ctx.layer.append(d); out.push({el:d, c, r, cols, rows});
+  }
+  return out;
+}
+const gridFor = (ctx, min, max) => { const cols = ri(min,max); return [cols, Math.max(2, Math.round(cols*ctx.H/ctx.W))]; };
+
+const FX = {
+  Slices(ctx){
+    const n = ri(5,9), s = sign(), p = pieces(ctx, n, 1), st = rand(40,75);
+    return all(p.map((q,i) => q.el.animate([{transform:`translateY(${(i%2?1:-1)*s*105}%)`},{transform:"translateY(0)"}],
+      {duration:rand(560,760), delay:i*st, easing:E.out, fill:"backwards"})));
+  },
+  Blinds(ctx){
+    const n = ri(6,11), from = Math.random()<.5 ? "top" : "bottom", p = pieces(ctx, 1, n);
+    return all(p.map((q,i) => { q.el.style.transformOrigin = from;
+      return q.el.animate([{transform:"scaleY(0)"},{transform:"scaleY(1)"}], {duration:520, delay:(from==="top"?i:n-1-i)*55, easing:E.out, fill:"backwards"}); }));
+  },
+  Pixels(ctx){
+    const [c,r] = gridFor(ctx,6,9), p = pieces(ctx, c, r);
+    return all(p.map(q => q.el.animate([{opacity:0, transform:"scale(.2)"},{opacity:1, transform:"scale(1)"}],
+      {duration:380, delay:rand(0,650), easing:E.out, fill:"backwards"})));
+  },
+  Checker(ctx){
+    const [c,r] = gridFor(ctx,4,7), p = pieces(ctx, c, r), rot = sign()*90;
+    return all(p.map(q => q.el.animate([{transform:`scale(0) rotate(${rot}deg)`},{transform:"scale(1) rotate(0)"}],
+      {duration:520, delay:((q.c+q.r)%2)*280 + (q.c+q.r)*22, easing:E.out, fill:"backwards"})));
+  },
+  Ripple(ctx){
+    const [c,r] = gridFor(ctx,7,10), p = pieces(ctx, c, r), ox = rand(0,c), oy = rand(0,r);
+    return all(p.map(q => q.el.animate([{transform:"scale(0)", borderRadius:"50%"},{transform:"scale(1)", borderRadius:"0%"}],
+      {duration:520, delay:Math.hypot(q.c-ox, q.r-oy)*65, easing:E.out, fill:"backwards"})));
+  },
+  Assemble(ctx){
+    const [c,r] = gridFor(ctx,3,5), p = pieces(ctx, c, r);
+    return all(p.map(q => q.el.animate([
+      {transform:`translate(${rand(-160,160)}%,${rand(-160,160)}%) rotate(${rand(-200,200)}deg) scale(.4)`, opacity:0},
+      {transform:"translate(0,0) rotate(0) scale(1)", opacity:1}], {duration:rand(700,900), delay:rand(0,220), easing:E.out, fill:"backwards"})));
+  },
+  Iris(ctx){
+    const im = full(ctx), x = ri(10,90), y = ri(10,90);
+    return fin(im.animate([{clipPath:`circle(0% at ${x}% ${y}%)`},{clipPath:`circle(145% at ${x}% ${y}%)`}], {duration:rand(750,950), easing:E.io}));
+  },
+  Curtain(ctx){
+    const side = pick(["0 100% 0 0","0 0 0 100%","0 0 100% 0","100% 0 0 0"]);
+    const bar = document.createElement("div"); bar.className = "bar"; bar.style.background = pick(["#e4472b","#161513","#f0b13a"]);
+    ctx.layer.append(bar); const im = full(ctx);
+    const k = [{clipPath:`inset(${side})`},{clipPath:"inset(0 0 0 0)"}];
+    return all([bar.animate(k,{duration:460, easing:E.io}), im.animate(k,{duration:540, delay:230, easing:E.io, fill:"backwards"})]);
+  },
+  Diagonal(ctx){
+    const corners = [
+      ["0 0,0 0,0 0","0 0,210% 0,0 210%"], ["100% 0,100% 0,100% 0","100% 0,100% 210%,-110% 0"],
+      ["0 100%,0 100%,0 100%","0 100%,0 -110%,210% 100%"], ["100% 100%,100% 100%,100% 100%","100% 100%,-110% 100%,100% -110%"]];
+    const [a,b] = pick(corners), im = full(ctx);
+    return fin(im.animate([{clipPath:`polygon(${a})`},{clipPath:`polygon(${b})`}], {duration:rand(700,900), easing:E.io}));
+  },
+  Doors(ctx){
+    const vertical = Math.random()<.4, p = vertical ? pieces(ctx,1,2) : pieces(ctx,2,1);
+    return all(p.map((q,i) => q.el.animate([{transform: vertical ? `translateY(${i?101:-101}%)` : `translateX(${i?101:-101}%)`},{transform:"translate(0,0)"}],
+      {duration:rand(650,820), easing:E.out})));
+  },
+  Push(ctx){
+    const d = ctx.dir || sign(), v = Math.random()<.3, T = n => v ? `translateY(${n}%)` : `translateX(${n}%)`, im = full(ctx);
+    const out = ctx.base.animate([{transform:T(0)},{transform:T(-d*100)}], {duration:680, easing:E.io, fill:"forwards"});
+    ctx.after.push(() => out.cancel());
+    return all([out, im.animate([{transform:T(d*100)},{transform:T(0)}], {duration:680, easing:E.io})]);
+  },
+  async Flip(ctx){
+    const ax = Math.random()<.5 ? "Y" : "X", s = sign(), P = "perspective(1000px) rotate" + ax;
+    const a1 = ctx.box.animate([{transform:`${P}(0deg)`},{transform:`${P}(${s*90}deg)`}], {duration:260, easing:E.in, fill:"forwards"});
+    await fin(a1);
+    ctx.base.src = ctx.src; try{ await ctx.base.decode(); }catch(e){}
+    const a2 = ctx.box.animate([{transform:`${P}(${-s*90}deg)`},{transform:`${P}(0deg)`}], {duration:420, easing:E.out});
+    a1.cancel(); await fin(a2);
+  },
+  Zoom(ctx){
+    const im = full(ctx), big = Math.random()<.5;
+    return fin(im.animate([{transform:`scale(${big?1.6:.4})`, opacity:0, filter:"blur(12px)"},{transform:"scale(1)", opacity:1, filter:"blur(0)"}],
+      {duration:rand(650,800), easing:E.out}));
+  },
+  Glitch(ctx){
+    const im = full(ctx), f = [{opacity:0}];
+    for(let k=0;k<9;k++) f.push({opacity:1, transform:`translate(${rand(-8,8)}%,${rand(-3,3)}%) skewX(${rand(-14,14)}deg)`,
+      filter:`hue-rotate(${ri(0,360)}deg) saturate(${rand(1,4).toFixed(1)}) contrast(${rand(1,1.8).toFixed(1)})`});
+    f.push({opacity:1, transform:"none", filter:"none"});
+    return fin(im.animate(f, {duration:rand(520,700), easing:"steps(1,end)"}));
+  },
+};
+const FX_FADE = ctx => fin(full(ctx).animate([{opacity:0},{opacity:1}], {duration:300}));
+const FX_NAMES = Object.keys(FX);
+let recent = [];
+function pickFx(){ let n; do { n = pick(FX_NAMES); } while(recent.includes(n)); recent = [n, ...recent].slice(0,3); return n; }
+
+async function swapImage(box, photoIndex, name, dir){
+  box._busy = true;
+  const src = await resolve(photoIndex); box._src = src;
+  const base = box.querySelector(".base");
+  if(!base.onerror) withFallback(base, photoIndex);
+  const layer = document.createElement("div"); layer.className = "fxl"; box.append(layer);
+  const ctx = { box, base, src, layer, dir, fit: box.dataset.fit || "contain", W: box.clientWidth || 1, H: box.clientHeight || 1, after: [] };
+  try { await (REDUCED ? FX_FADE : FX[name])(ctx); } catch(e){ console.warn(e); }
+  if(base.getAttribute("src") !== src){ base.src = src; try{ await base.decode(); }catch(e){} }
+  ctx.after.forEach(f => f());
+  layer.remove(); box._busy = false;
+}
+
+/* =====================================================================
+   MOSAIC
+   ===================================================================== */
+const mosaic = $("mosaic");
+const SLOTS = Math.min(PHOTOS.length, 8);
+const slots = [];
+let hidden = PHOTOS.map((_,i)=>i).slice(SLOTS);
+let played = 0;
+
+/* Create slots */
+for(let k=0;k<SLOTS;k++){
+  const fig = document.createElement("figure"); fig.className = "tile";
+  fig.innerHTML = `<div class="tilt"><button class="box" type="button"><img class="base" alt=""></button><span class="tag"></span><figcaption></figcaption></div>`;
+  mosaic.append(fig);
+  const s = { fig, tilt: fig.querySelector(".tilt"), box: fig.querySelector(".box"), tag: fig.querySelector(".tag"), cap: fig.querySelector("figcaption"), photo: k };
+  withFallback(s.box.querySelector(".base"), k);
+  slots.push(s);
+}
+
+/* Attach click handler to the figure (not the box) so it always fires */
+slots.forEach(s => {
+  s.fig.addEventListener("click", (e) => {
+    // Don't open if a swap is in progress
+    if(s.box._busy) return;
+    e.preventDefault();
+    openViewer(s.photo, s.box);
+  });
+  // Keyboard accessibility
+  s.fig.addEventListener("keydown", (e) => {
+    if(e.key === "Enter" || e.key === " "){
+      if(s.box._busy) return;
+      e.preventDefault();
+      openViewer(s.photo, s.box);
+    }
+  });
+  s.fig.setAttribute("tabindex", "0");
+  s.fig.setAttribute("role", "button");
+  
+  s.fig.addEventListener("pointermove", e => {
+    if(e.pointerType !== "mouse" || REDUCED) return;
+    const r = s.fig.getBoundingClientRect(), x = (e.clientX - r.left)/r.width - .5, y = (e.clientY - r.top)/r.height - .5;
+    s.tilt.style.transform = `perspective(900px) rotateX(${(-y*7).toFixed(2)}deg) rotateY(${(x*9).toFixed(2)}deg) scale(1.015)`;
+  });
+  s.fig.addEventListener("pointerleave", () => s.tilt.style.transform = "");
+});
+
+/* Compute row-span based on image aspect ratio */
+function setTileSpan(s) {
+  const img = s.box.querySelector(".base");
+  const w = img.naturalWidth || 1;
+  const h = img.naturalHeight || 1;
+  const ratio = w / h;
+  const baseRow = parseFloat(getComputedStyle(mosaic).gridAutoRows) || 8;
+  const gap = parseFloat(getComputedStyle(mosaic).gap) || 12;
+  let tileWidth = s.fig.clientWidth || 200;
+  let tileHeight = tileWidth / ratio;
+  tileHeight = Math.max(tileHeight, 60);
+  const rowSpan = Math.max(1, Math.ceil((tileHeight + gap) / (baseRow + gap)));
+  s.fig.style.setProperty("--row-span", rowSpan);
+}
+
+function updateAllSpans() {
+  slots.forEach(s => setTileSpan(s));
+}
+window.addEventListener("resize", () => { requestAnimationFrame(updateAllSpans); });
+
+function label(s){
+  const p = PHOTOS[s.photo];
+  s.tag.textContent = "No." + pad(s.photo+1);
+  s.cap.textContent = p.caption;
+  s.fig.setAttribute("aria-label", `Open photo ${s.photo+1}: ${p.caption}`);
+}
+
+/* ============================================================
+   RE-LAYOUT: Shuffle which photo sits in which tile.
+   ============================================================ */
+function relayout(){
+  const photoAssignments = slots.map(s => s.photo);
+  const shuffled = shuffle(photoAssignments);
+  slots.forEach((s, i) => {
+    const newPhoto = shuffled[i];
+    if (newPhoto === s.photo) return;
+    if(!REDUCED){
+      s.fig.animate(
+        [{transform:"scale(1)"},{transform:"scale(.96)"},{transform:"scale(1)"}],
+        {duration:420, delay:i*20, easing:E.back}
+      );
+    }
+    tileSwap(s, newPhoto, sign());
+  });
+  setLive("Layout reshuffled · photos redistributed");
+}
+
+/* live strip + stats */
+const liveText = $("liveText");
+function setLive(text){
+  liveText.textContent = text;
+  if(!REDUCED) liveText.animate([{transform:"translateY(110%)", opacity:0},{transform:"translateY(0)", opacity:1}], {duration:450, easing:E.out});
+}
+function bump(){ played++; $("stPlayed").textContent = pad(played, 3); }
+$("stFrames").textContent = pad(PHOTOS.length);
+$("stFx").textContent = pad(FX_NAMES.length);
+
+function tileSwap(s, photo, dir){
+  const name = pickFx(); s.photo = photo;
+  bump();
+  return swapImage(s.box, photo, name, dir).then(() => {
+    label(s);
+    const img = s.box.querySelector(".base");
+    if (img.complete && img.naturalWidth) {
+      setTileSpan(s);
+    } else {
+      img.addEventListener("load", () => setTileSpan(s), {once:true});
+      setTimeout(() => setTileSpan(s), 500);
+    }
+  }).then(() => name);
+}
+
+async function tick(){
+  const free = slots.filter(s => !s.box._busy);
+  if(!free.length) return;
+  if(hidden.length && (Math.random() < .6 || free.length < 2)){
+    const s = pick(free), hi = Math.floor(Math.random()*hidden.length), incoming = hidden[hi];
+    hidden[hi] = s.photo;
+    const p = tileSwap(s, incoming, sign()); setLive(`Frame ${pad(incoming+1)} arrives · ${recent[0]}`); await p;
+  } else if(free.length >= 2){
+    const [a,b] = shuffle(free);
+    const pa = a.photo, pb = b.photo;
+    const t1 = tileSwap(a, pb, 1); const n1 = recent[0];
+    const t2 = tileSwap(b, pa, -1); const n2 = recent[0];
+    setLive(`No.${pad(pa+1)} ⇄ No.${pad(pb+1)} · ${n1} / ${n2}`);
+    await Promise.all([t1,t2]);
+  }
+}
+
+/* scheduler */
+let chaos = 3, paused = REDUCED, timer = null, vOpen = false;
+const SPEED = [5200, 3600, 2400, 1500, 800];
+function schedule(){
+  clearTimeout(timer);
+  timer = setTimeout(() => {
+    if(!paused && !vOpen && !document.hidden){ tick(); if(chaos === 5 && Math.random() < .5) setTimeout(tick, 250); }
+    schedule();
+  }, SPEED[chaos-1] * rand(.7, 1.3));
+}
+
+/* render hero text from TITLE config */
+function renderHero(){
+  const h1 = $("heroTitle");
+  h1.innerHTML = TITLE.map((ln, i) => {
+    if(i === TITLE.length - 1){
+      const trimmed = ln.replace(/\.$/, "");
+      const last = `<em>${trimmed}</em>`;
+      return `<span class="ln"><span>${last}<span class="dot">.</span></span></span>`;
+    }
+    const middle = i === 1 ? `<em>${ln}</em>` : ln;
+    return `<span class="ln"><span>${middle}</span></span>`;
+  }).join("");
+  $("heroTagline").textContent = TAGLINE;
+}
+
+/* entrance */
+function intro(){
+  renderHero();
+  $("today").textContent = new Date().toLocaleDateString("en-GB").replace(/\//g, ".");
+  if(!REDUCED) document.querySelectorAll("h1 .ln > span").forEach((el,i) =>
+    el.animate([{transform:"translateY(110%)"},{transform:"translateY(0)"}], {duration:1100, delay:150 + i*120, easing:E.out, fill:"backwards"}));
+  
+  slots.forEach((s,i) => setTimeout(() => tileSwap(s, s.photo, sign()), REDUCED ? 0 : 450 + i*140 + rand(0,160)));
+  
+  setTimeout(updateAllSpans, 800);
+  setTimeout(updateAllSpans, 1600);
+  
+  resolve(0).then(s0 => {
+    if(s0 === FALLBACK(0)){
+      $("footInfo").innerHTML = 'Drop images in the root folder and edit the PHOTOS list in the HTML';
+      setTimeout(() => setLive("No photos found yet · showing placeholder art — add files to the root folder"), 600);
+    } else {
+      setTimeout(() => setLive("Mosaic is live · frames will trade places at random"), 1800);
+    }
+  });
+  schedule();
+}
+
+/* dock */
+const btnPause = $("btnPause");
+function setPaused(v){
+  paused = v; document.body.classList.toggle("paused", v);
+  btnPause.innerHTML = v ? `▶ <span class="t">Play</span>` : `❚❚ <span class="t">Pause</span>`;
+  setLive(v ? "Paused" : "Resumed · random transitions on");
+}
+btnPause.addEventListener("click", () => setPaused(!paused));
+$("btnLayout").addEventListener("click", relayout);
+$("btnSurprise").addEventListener("click", () => {
+  const i = ri(0, PHOTOS.length-1), s = slots.find(s => s.photo === i);
+  openViewer(i, s ? s.box : null);
+});
+const bars = $("bars");
+for(let k=1;k<=5;k++){
+  const b = document.createElement("button"); b.style.height = (5 + k*2.6) + "px";
+  b.setAttribute("aria-label", "Chaos level " + k);
+  b.addEventListener("click", () => { chaos = k; paintBars(); setLive(`Chaos level ${k} of 5`); schedule(); });
+  bars.append(b);
+}
+function paintBars(){ [...bars.children].forEach((b,i) => b.classList.toggle("on", i < chaos)); }
+paintBars();
+if(REDUCED) setPaused(true);
+
+/* =====================================================================
+   VIEWER
+   ===================================================================== */
+const viewer = $("viewer"), stage = $("stage"), vCap = $("vCap"), vIdx = $("vIdx"), vFx = $("vFx"), vProg = $("vProg"), vPlay = $("vPlay");
+let current = 0, playing = false, playTimer = null, progAnim = null, lastFocus = null;
+const SLIDE_MS = 3800;
+
+function flipFrom(el, rect, reverse){
+  const b = el.getBoundingClientRect();
+  const k = [{transform:`translate(${rect.left-b.left}px,${rect.top-b.top}px) scale(${rect.width/b.width},${rect.height/b.height})`, opacity:.5},
+             {transform:"none", opacity:1}];
+  return el.animate(reverse ? k.reverse() : k, {duration: reverse ? 480 : 700, easing: reverse ? E.io : E.out, fill: reverse ? "forwards" : "none"});
+}
+function setMeta(){
+  vIdx.textContent = `No. ${pad(current+1)} / ${pad(PHOTOS.length)}`;
+  const words = PHOTOS[current].caption.split(" ");
+  vCap.innerHTML = words.map(w => `<span class="w"><span>${w.replace(/</g,"&lt;")}</span></span>`).join(" ");
+  if(!REDUCED) vCap.querySelectorAll(".w > span").forEach((el,i) =>
+    el.animate([{transform:"translateY(110%)"},{transform:"translateY(0)"}], {duration:700, delay:120 + i*60, easing:E.out, fill:"backwards"}));
+}
+function showFx(name){
+  vFx.textContent = "✦ " + name;
+  if(!REDUCED) vFx.animate([{opacity:0, transform:"translateY(-6px)"},{opacity:1, transform:"none"}], {duration:350, easing:E.out});
+}
+async function openViewer(i, fromBox){
+  current = i; vOpen = true; lastFocus = document.activeElement;
+  viewer.classList.add("open"); document.body.style.overflow = "hidden";
+  setMeta(); showFx("Opened");
+  const base = stage.querySelector(".base");
+  withFallback(base, i);
+  const src = await resolve(i); base.src = src; stage._src = src;
+  try{ await base.decode(); }catch(e){}
+  if(fromBox && !REDUCED) flipFrom(stage, fromBox.getBoundingClientRect());
+  $("vClose").focus({preventScroll:true});
+}
+async function closeViewer(){
+  if(!vOpen) return;
+  setPlaying(false);
+  const s = slots.find(s => s.photo === current);
+  if(s && !REDUCED){
+    const r = s.box.getBoundingClientRect();
+    if(r.bottom > 0 && r.top < innerHeight){ const a = flipFrom(stage, r, true); await fin(a); setTimeout(() => a.cancel(), 360); }
+  }
+  viewer.classList.remove("open"); document.body.style.overflow = ""; vOpen = false;
+  lastFocus?.focus?.({preventScroll:true});
+}
+async function syncStage(dir){
+  if(stage._busy){ stage._want = dir; return; }
+  do {
+    stage._want = 0;
+    const name = pickFx(); showFx(name); bump();
+    await swapImage(stage, current, name, dir);
+    dir = stage._want || dir;
+    const wantSrc = await resolve(current);
+  } while(stage._src !== await resolve(current));
+}
+function nav(d){
+  current = (current + d + PHOTOS.length) % PHOTOS.length;
+  setMeta(); syncStage(d); cycle();
+}
+function cycle(){
+  clearTimeout(playTimer); progAnim?.cancel();
+  if(!playing) return;
+  progAnim = vProg.animate([{width:"0%"},{width:"100%"}], {duration:SLIDE_MS, easing:"linear", fill:"forwards"});
+  playTimer = setTimeout(() => nav(1), SLIDE_MS);
+}
+function setPlaying(v){
+  playing = v; vPlay.classList.toggle("on", v);
+  vPlay.textContent = v ? "❚❚ Pause show" : "▶ Slideshow";
+  cycle();
+}
+$("vClose").addEventListener("click", closeViewer);
+$("vNext").addEventListener("click", () => nav(1));
+$("vPrev").addEventListener("click", () => nav(-1));
+vPlay.addEventListener("click", () => setPlaying(!playing));
+document.addEventListener("keydown", e => {
+  if(!vOpen) return;
+  if(e.key === "Escape") closeViewer();
+  else if(e.key === "ArrowRight") nav(1);
+  else if(e.key === "ArrowLeft") nav(-1);
+  else if(e.key === " "){ e.preventDefault(); setPlaying(!playing); }
+});
+let tx = null;
+stage.addEventListener("touchstart", e => { tx = e.touches[0].clientX; }, {passive:true});
+stage.addEventListener("touchend", e => {
+  if(tx === null) return; const dx = e.changedTouches[0].clientX - tx;
+  if(Math.abs(dx) > 40) nav(dx < 0 ? 1 : -1); tx = null;
+}, {passive:true});
+
+intro();
+</script>
+</body>
+</html>
